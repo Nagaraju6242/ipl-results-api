@@ -81,6 +81,7 @@ def get_predictions(match_id):
     all_bowlers.sort(key=lambda x: (-x["Wickets"], x["Economy"]))
 
     return {
+        "match_id": match_id,
         "individual": {
             "toss_winner": toss_winner,
             "match_winner": match_winner,
