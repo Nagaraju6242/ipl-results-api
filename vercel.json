@@ -1,5 +1,7 @@
 {
-  "rewrites": [
-    { "source": "/api/predictions", "destination": "/api/predictions" }
-  ]
+  "functions": {
+    "api/index.py": {
+      "runtime": "python3.12"
+    }
+  }
 }
