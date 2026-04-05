@@ -111,19 +111,23 @@ def get_predictions(match_id):
     s2_at10 = sum(rpo2.get(o, 0) for o in range(10))
     t1_code = summary["HomeTeamCode"] if str(summary["FirstBattingTeamID"]) == str(summary["HomeTeamID"]) else summary["AwayTeamCode"]
     t2_code = summary["AwayTeamCode"] if t1_code == summary["HomeTeamCode"] else summary["HomeTeamCode"]
-    leader = t1_code if s1_at10 > s2_at10 else (t2_code if s2_at10 > s1_at10 else "TIE")
+    max_overs = max(max(rpo1.keys(), default=0), max(rpo2.keys(), default=0)) + 1
+    s1, s2 = 0, 0
+    for o in range(max_overs):
+        s1 += rpo1.get(o, 0)
+        s2 += rpo2.get(o, 0)
+        if o >= 9 and s1 != s2:
+            break
+    leader = t1_code if s1 > s2 else (t2_code if s2 > s1 else "TIE")
 
-    # Dot balls
-    bowler_dots = {}
-    for inn in [inn1, inn2]:
-        for b in inn["BowlingCard"]:
-            name = b["PlayerShortName"]
-            bowler_dots[name] = bowler_dots.get(name, 0) + b["DotBalls"]
-    top_dot = max(bowler_dots, key=bowler_dots.get) if bowler_dots else "N/A"
+    # Dot balls (tiebreak: lowest economy, then most wickets)
+    all_bowlers = inn1["BowlingCard"] + inn2["BowlingCard"]
+    all_bowlers.sort(key=lambda x: (-x["DotBalls"], x["Economy"], -x["Wickets"]))
+    top_dot = all_bowlers[0]["PlayerShortName"] if all_bowlers else "N/A"
 
     # Top bowler
     all_bowlers = inn1["BowlingCard"] + inn2["BowlingCard"]
-    all_bowlers.sort(key=lambda x: (-x["Wickets"], x["Economy"]))
+    all_bowlers.sort(key=lambda x: (-x["Wickets"], x["Economy"], x["Wides"] + x["NoBalls"]))
 
     return {
         "match_id": match_id,
