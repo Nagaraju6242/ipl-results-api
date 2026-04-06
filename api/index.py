@@ -85,22 +85,9 @@ def get_predictions(match_id):
     # POTM
     potm = clean_name(summary["MOM"].split("(")[0]) if summary["MOM"] else "N/A"
 
-    # 5th wicket dismissal
-    keeper_names = get_keeper_names(match_id)
-    fow1 = inn1["FallOfWickets"]
-    dismissal_5 = "Not Out"
-    if len(fow1) >= 5:
-        out_id = fow1[4].get("PlayerID", "")
-        for ball in inn1["OverHistory"]:
-            if ball["IsWicket"] == "1" and ball.get("OutBatsManID", "") == out_id:
-                # Find OutDesc from BattingCard
-                out_desc = ""
-                for b in inn1["BattingCard"]:
-                    if b["PlayerID"] == out_id:
-                        out_desc = b.get("OutDesc", "")
-                        break
-                dismissal_5 = map_dismissal(ball["WicketType"], out_desc, keeper_names)
-                break
+    # First ball outcome of first innings
+    first_ball = inn1["OverHistory"][0]
+    first_ball_result = "Run" if int(first_ball["TotalRuns"]) > 0 else "NoRun"
 
     # Manhattan
     mg1, mg2 = split_manhattan(inn1["ManhattanGraph"])
@@ -141,7 +128,7 @@ def get_predictions(match_id):
             "total_sixes": sum(b["Sixes"] for b in batters),
         },
         "group": {
-            "5th_wkt_dismissal": dismissal_5,
+            "first_ball": first_ball_result,
             "half_stage_lead": leader,
             "overs_10plus_runs": sum(1 for v in rpo1.values() if v >= 10) + sum(1 for v in rpo2.values() if v >= 10),
             "powerplay_scores": f"{sum(rpo1.get(o, 0) for o in range(6))},{sum(rpo2.get(o, 0) for o in range(6))}",
