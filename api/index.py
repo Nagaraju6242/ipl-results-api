@@ -87,7 +87,7 @@ def get_predictions(match_id):
 
     # First ball outcome of first innings
     first_ball = inn1["OverHistory"][0]
-    first_ball_result = "Run" if int(first_ball["TotalRuns"]) > 0 else "NoRun"
+    first_ball_result = "Run" if int(first_ball["TotalRuns"]) > 0 else "No Run"
 
     # Manhattan
     mg1, mg2 = split_manhattan(inn1["ManhattanGraph"])
