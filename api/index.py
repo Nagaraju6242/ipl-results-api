@@ -2,6 +2,7 @@ import json, re, urllib.request
 from http.server import BaseHTTPRequestHandler
 
 IPL_FEED = "https://ipl-stats-sports-mechanic.s3.ap-south-1.amazonaws.com/ipl/feeds"
+SCHEDULE_FEED = f"{IPL_FEED}/284-matchschedule.js"
 
 
 def fetch_jsonp(url):
@@ -152,21 +153,28 @@ def get_predictions(match_id):
     }
 
 
+def get_todays_matches():
+    from datetime import datetime, timezone, timedelta
+    today = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%Y-%m-%d")
+    schedule = fetch_jsonp(SCHEDULE_FEED)["Matchsummary"]
+    results = []
+    for m in schedule:
+        if m["MatchDate"] == today and m["MatchStatus"] == "Post":
+            try:
+                results.append(get_predictions(str(m["MatchID"])))
+            except Exception:
+                pass
+    return results
+
+
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         from urllib.parse import urlparse, parse_qs
         query = parse_qs(urlparse(self.path).query)
         match_id = query.get("match_id", [None])[0]
 
-        if not match_id:
-            self.send_response(400)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps({"error": "match_id query param required"}).encode())
-            return
-
         try:
-            result = get_predictions(match_id)
+            result = get_todays_matches() if not match_id else get_predictions(match_id)
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Access-Control-Allow-Origin", "*")
