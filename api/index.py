@@ -80,7 +80,7 @@ def get_predictions(match_id):
         for b in inn["BattingCard"]:
             if b["Balls"] > 0:
                 batters.append(b)
-    batters.sort(key=lambda x: (-x["Balls"], -x["Runs"], -float(x["StrikeRate"])))
+    batters.sort(key=lambda x: (-x["Balls"], -x["Runs"], -x["Sixes"], -x["Fours"]))
 
     # POTM
     potm = clean_name(summary["MOM"].split("(")[0]) if summary["MOM"] else "N/A"
@@ -91,21 +91,34 @@ def get_predictions(match_id):
 
     # Manhattan
     mg1, mg2 = split_manhattan(inn1["ManhattanGraph"])
-    rpo1 = {m["OverNo"]: m["OverRuns"] for m in mg1}
-    rpo2 = {m["OverNo"]: m["OverRuns"] for m in mg2}
+    rpo1, rpo2 = {}, {}
+    for m in mg1:
+        rpo1[m["OverNo"]] = rpo1.get(m["OverNo"], 0) + m["OverRuns"]
+    for m in mg2:
+        rpo2[m["OverNo"]] = rpo2.get(m["OverNo"], 0) + m["OverRuns"]
 
-    s1_at10 = sum(rpo1.get(o, 0) for o in range(10))
-    s2_at10 = sum(rpo2.get(o, 0) for o in range(10))
     t1_code = summary["HomeTeamCode"] if str(summary["FirstBattingTeamID"]) == str(summary["HomeTeamID"]) else summary["AwayTeamCode"]
     t2_code = summary["AwayTeamCode"] if t1_code == summary["HomeTeamCode"] else summary["HomeTeamCode"]
-    max_overs = max(max(rpo1.keys(), default=0), max(rpo2.keys(), default=0)) + 1
-    s1, s2 = 0, 0
-    for o in range(max_overs):
-        s1 += rpo1.get(o, 0)
-        s2 += rpo2.get(o, 0)
-        if o >= 9 and s1 != s2:
-            break
-    leader = t1_code if s1 > s2 else (t2_code if s2 > s1 else "TIE")
+    s1_at10 = sum(rpo1.get(o, 0) for o in range(10))
+    s2_at10 = sum(rpo2.get(o, 0) for o in range(10))
+    if s1_at10 != s2_at10:
+        leader = t1_code if s1_at10 > s2_at10 else t2_code
+    else:
+        # Tied on runs at 10 overs — fewer wickets wins
+        w1 = sum(m["Wickets"] for m in mg1 if m["OverNo"] < 10)
+        w2 = sum(m["Wickets"] for m in mg2 if m["OverNo"] < 10)
+        if w1 != w2:
+            leader = t1_code if w1 < w2 else t2_code
+        else:
+            # Same runs and wickets — extend over by over until one leads
+            max_overs = max(max(rpo1.keys(), default=0), max(rpo2.keys(), default=0)) + 1
+            s1, s2 = 0, 0
+            for o in range(max_overs):
+                s1 += rpo1.get(o, 0)
+                s2 += rpo2.get(o, 0)
+                if o >= 9 and s1 != s2:
+                    break
+            leader = t1_code if s1 > s2 else (t2_code if s2 > s1 else "TIE")
 
     # Dot balls (tiebreak: lowest economy, then most wickets)
     all_bowlers = inn1["BowlingCard"] + inn2["BowlingCard"]
