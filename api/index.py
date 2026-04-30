@@ -139,16 +139,16 @@ def get_predictions(match_id):
             "scores": f"{summary['1FallScore']},{summary['2FallScore']}",
             "potm": potm,
             "most_balls_faced": clean_name(batters[0]["PlayerName"]) if batters else "N/A",
-            "total_sixes": sum(b["Sixes"] for b in batters),
+            "last_over": rpo1.get(19, 0),
         },
         "group": {
             "first_ball": first_ball_result,
             "half_stage_lead": leader,
+            "total_sixes": sum(b["Sixes"] for b in batters),
             "overs_10plus_runs": sum(1 for v in rpo1.values() if v >= 10) + sum(1 for v in rpo2.values() if v >= 10),
             "powerplay_scores": f"{sum(rpo1.get(o, 0) for o in range(6))},{sum(rpo2.get(o, 0) for o in range(6))}",
             "most_dot_balls_bowler": top_dot,
             "top_bowler": all_bowlers[0]["PlayerShortName"] if all_bowlers else "N/A",
-            "total_extras": int(inn1["Extras"][0]["TotalExtras"]) + int(inn2["Extras"][0]["TotalExtras"]),
         },
     }
 
